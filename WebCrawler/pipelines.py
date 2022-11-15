@@ -22,55 +22,54 @@ class LibarayscraperPipeline:
         self.client = MongoClient('localhost', 27017)
         self.collection = 'library'
         self.db = self.client[self.collection]
-        self.table_books = self.db['books']
-        self.table_authors = self.db['authors']
-        self.check_book = []
-        self.check_author = []
-        self.check_related_author = []
+        self.table_movies = self.db['movies']
+        self.table_plot = self.db['plot']
+        self.check_movie = []
+        self.check_plot = []
         self.crawler = crawler
 
     def process_item(self, item, spider):
         if self.collection != spider.collection:
             self.collection = spider.collection
 
-        if len(self.check_book) >= spider.max_book\
-                and spider.max_author <= len(self.check_author) == len(self.check_related_author):
-            self.crawler.engine.close_spider(spider, "book and author full")
+        if len(self.check_movie) >= spider.max_movie\
+                and spider.max_plot <= len(self.check_plot) == len(self.check_related_plot):
+            self.crawler.engine.close_spider(spider, "movie and plot full")
             return item
 
-        if item.get('book_id', False):
-            if len(self.check_book) < spider.max_book:
-                book_id = item['book_id']
-                if book_id in self.check_book:
+        if item.get('movie_id', False):
+            if len(self.check_movie) < spider.max_movie:
+                movie_id = item['movie_id']
+                if movie_id in self.check_movie:
                     raise DropItem(item)
-                self.check_book.append(book_id)
+                self.check_movie.append(movie_id)
 
-                self.table_books.insert_one(dict(item))
-                print("stored book " + book_id)
-                # spider.count_book += 1
+                self.table_movies.insert_one(dict(item))
+                print("stored movie " + movie_id)
+                # spider.count_movie += 1
             else:
-                spider.completed_book = True
-        elif item.get('author_url', False):
-            if len(self.check_author) < spider.max_author:
-                author_id = item['author_id']
-                if author_id in self.check_author:
+                spider.completed_movie = True
+        elif item.get('plot_url', False):
+            if len(self.check_plot) < spider.max_plot:
+                plot_id = item['plot_id']
+                if plot_id in self.check_plot:
                     raise DropItem(item)
-                self.check_author.append(author_id)
+                self.check_plot.append(plot_id)
 
-                self.table_authors.insert_one(dict(item))
-                print("stored author " + author_id)
-                # spider.count_author += 1
+                self.table_plot.insert_one(dict(item))
+                print("stored plot " + plot_id)
+                # spider.count_plot += 1
             else:
-                spider.completed_author = True
+                spider.completed_plot = True
 
         else:
-            author_id = item['author_id']
-            if author_id in self.check_related_author:
+            plot_id = item['plot_id']
+            if plot_id in self.check_related_plot:
                 raise DropItem(item)
-            if author_id in self.check_author:
-                self.check_related_author.append(author_id)
-                query = {"author_id": author_id}
-                update = {"$set": {"related_authors": item['related_authors']}}
-                self.table_authors.find_one_and_update(query, update)
+            if plot_id in self.check_plot:
+                self.check_related_plot.append(plot_id)
+                query = {"plot_id": plot_id}
+                update = {"$set": {"related_plot": item['related_plot']}}
+                self.table_plot.find_one_and_update(query, update)
 
         return item
