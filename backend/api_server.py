@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db_actions import *
 from DCP import *
+from vectorization import *
 
 app = FastAPI()
 
@@ -40,6 +41,13 @@ async def imdb_get_by_title(movie_title: str):
 @app.get("/api/bm25/{movie_id}")
 async def bm25_compare(movie_id: str):
     result_id_list = BM25_IMBD(movie_id)
+    response = get_by_multiple_id_brief(result_id_list)
+    return response
+
+
+@app.get("/api/vector/{movie_id}")
+async def vector_compare(movie_id: str):
+    result_id_list = vectorization(movie_id)
     response = get_by_multiple_id_brief(result_id_list)
     return response
 
