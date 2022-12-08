@@ -45,9 +45,16 @@ async def bm25_compare(movie_id: str):
     return response
 
 
-@app.get("/api/vector/{movie_id}")
-async def vector_compare(movie_id: str):
-    result_id_list = vectorization(movie_id)
+@app.get("/api/vectordb/{movie_id}")
+async def vector_dbmv(movie_id: str):
+    result_id_list = vectorization(movie_id, "id")
+    response = get_by_multiple_id_brief(result_id_list)
+    return response
+
+
+@app.get("/api/vectornew/{new_plot}")
+async def vector_newmv(movie_id: str):
+    result_id_list = vectorization(new_plot, "plot")
     response = get_by_multiple_id_brief(result_id_list)
     return response
 
