@@ -4,11 +4,17 @@ import re
 from plsa.algorithms import PLSA
 from plsa import Corpus, Pipeline
 from plsa.pipeline import DEFAULT_PIPELINE
+import nltk
+from nltk.corpus import stopwords
 import numpy as np
 import csv
 
 
 def plsa_train(topic_num):
+    nltk.download('stopwords', download_dir='E:/workspace/cs410/fp/backend/stopword_data')
+    nltk.download('averaged_perceptron_tagger' , download_dir='E:/workspace/cs410/fp/backend/stopword_data')
+    nltk.download('wordnet' , download_dir='E:/workspace/cs410/fp/backend/stopword_data')
+
     client = MongoClient('mongodb+srv://groupMember:1155665@cluster0.xmygnse.mongodb.net/?retryWrites=true&w=majority')
     collection = 'MoviePlotDB'
     db = client[collection]
@@ -21,14 +27,7 @@ def plsa_train(topic_num):
 
     movie_sim_pd = pandas.DataFrame(movie_sim)
     pattern = r"[0-9a-zA-Z\ -']+"
-    stop_words = ["i", "me", "my", "myself",
-                  "we", "our", "ours", "ourselves",
-                  "you", "your", "yours",
-                  "their", "they", "his", "her",
-                  "she", "he", "a", "an", "and",
-                  "is", "was", "are", "were",
-                  "him", "himself", "has", "have",
-                  "it", "its", "the", "us"]
+    stop_words = set(stopwords.words('english'))
     tokens = movie_sim_pd['movie_plot'].apply(lambda x: "".join(re.findall(pattern, x.lower())))
     new_tokens = []
     index = []
@@ -42,8 +41,8 @@ def plsa_train(topic_num):
     pipeline = Pipeline(*DEFAULT_PIPELINE)
     corpus = Corpus(new_tokens, pipeline)
     plsa = PLSA(corpus, topic_num, True)
-    result = plsa.fit()
-    plsa_result = result.topic_given_doc
+    plsa_result_raw = plsa.fit()
+    plsa_result = plsa_result_raw.topic_given_doc
     rows = []
     for doc in plsa_result.tolist():
         rows.append(doc)
@@ -51,6 +50,7 @@ def plsa_train(topic_num):
         write = csv.writer(f)
         write.writerows(rows)
     f.close()
+    print('completed PLSA training')
 
 
 def plsa_sim(movie_id):
@@ -59,10 +59,17 @@ def plsa_sim(movie_id):
     for line in f:
         row1 = []
         for num in line.strip().split(','):
+            if num == "":
+                continue
             row1.append(float(num))
+
         new_result.append(row1)
     f.close()
+    # print(type(new_result))
+    # print(type(new_result[0]))
+    # print(type(new_result[0][0]))
     plsa_result = np.array(new_result)
+    nltk.download('stopwords', download_dir='E:/workspace/cs410/fp/backend/stopword_data')
     client = MongoClient('mongodb+srv://groupMember:1155665@cluster0.xmygnse.mongodb.net/?retryWrites=true&w=majority')
     collection = 'MoviePlotDB'
     db = client[collection]
@@ -75,14 +82,7 @@ def plsa_sim(movie_id):
 
     movie_sim_pd = pandas.DataFrame(movie_sim)
     pattern = r"[0-9a-zA-Z\ -']+"
-    stop_words = ["i", "me", "my", "myself",
-                  "we", "our", "ours", "ourselves",
-                  "you", "your", "yours",
-                  "their", "they", "his", "her",
-                  "she", "he", "a", "an", "and",
-                  "is", "was", "are", "were",
-                  "him", "himself", "has", "have",
-                  "it", "its", "the", "us"]
+    stop_words = set(stopwords.words('english'))
     tokens = movie_sim_pd['movie_plot'].apply(lambda x: "".join(re.findall(pattern, x.lower())))
     new_tokens = []
     index = []
@@ -98,15 +98,15 @@ def plsa_sim(movie_id):
     for i, m in enumerate(plsa_result):
         value = np.sum(target_movie * m)
         if value > 0:
-            mov = movie_sim_pd[movie_sim_pd['index'] == i]['movie_title'].values[0]
+            mov = movie_sim_pd[movie_sim_pd['index'] == i]['movie_id'].values[0]
             score_dict[mov] = value
-    top_10_tuple = sorted(score_dict.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_10_tuple = sorted(score_dict.items(), key=lambda x: x[1], reverse=True)[1:11]
     top_10 = []
-    for tuple in top_10_tuple:
-        top_10.append(tuple[0])
+    for t in top_10_tuple:
+        top_10.append(t[0])
     return top_10
 
 
 if __name__ == '__main__':
-    plsa_train(10)
-    print(plsa_sim("tt0499549"))
+    result = plsa_train(5)
+    plsa_sim("tt0499549", result)
