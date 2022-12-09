@@ -38,3 +38,13 @@ def get_by_title(movie_title):
                                                                      'movie_score': 1})
     data = list(data)
     return data
+
+# def set_plsa_topics(topics):
+#     client = MongoClient('mongodb+srv://groupMember:1155665@cluster0.xmygnse.mongodb.net/?retryWrites=true&w=majority')
+#     collection = 'MoviePlotDB'
+#     db = client[collection]
+#     table_movies = db['plsa_topics']
+#
+#     data = table_movies.find({'movie_title': movie_title_re}, {'_id': 0, 'movie_id': 1, 'movie_title': 1, 'movie_poster': 1,
+#                                                                      'movie_year': 1, 'movie_level': 1, 'movie_genres': 1,
+#                                                                      'movie_score': 1})

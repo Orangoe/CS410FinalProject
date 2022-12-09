@@ -1,8 +1,12 @@
-from fastapi import FastAPI
+import os
+
+from fastapi import Request, FastAPI
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from db_actions import *
 from DCP import *
 from vectorization import *
+from plsa_similarity import *
 
 app = FastAPI()
 
@@ -20,6 +24,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class Item(BaseModel):
+    movie_plot: str
+
+
 
 @app.get("/api/")
 async def root():
@@ -52,12 +62,24 @@ async def vector_dbmv(movie_id: str):
     return response
 
 
-@app.get("/api/vectornew/{new_plot}")
-async def vector_newmv(movie_id: str):
+@app.post("/api/vectornew")
+async def vector_newmv(data: Item):
+    new_plot = data.movie_plot
     result_id_list = vectorization(new_plot, "plot")
     response = get_by_multiple_id_brief(result_id_list)
     return response
 
 
-# @app.on_event("startup")
-# async def connect_to_db():
+@app.get("/api/plsa/{movie_id}")
+async def plsa_dbmv(movie_id: str):
+    result_id_list = plsa_sim(movie_id)
+    response = get_by_multiple_id_brief(result_id_list)
+    return response
+
+
+@app.on_event("startup")
+async def connect_to_db():
+    isExist = os.path.exists("train_model.csv")
+    if not isExist:
+        plsa_train(10)
+    return

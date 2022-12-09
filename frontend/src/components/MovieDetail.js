@@ -1,6 +1,6 @@
 import React,{useState, useEffect} from 'react'
-import {useNavigate, useParams} from "react-router";
-import {getMovieByID, getRecoBM25} from "../utils/api";
+import {useLocation, useNavigate, useParams} from "react-router";
+import {getMovieByID, getRecoBM25, getRecoPLSA, getRecoVec} from "../utils/api";
 import MRNavBar from "./styledComponents/mrNavBar";
 import Container from "react-bootstrap/Container";
 import Row from 'react-bootstrap/Row';
@@ -9,6 +9,7 @@ import styled from 'styled-components';
 import Card from "react-bootstrap/Card";
 import Badge from "react-bootstrap/Badge";
 import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
 
 const MRrecoResultContainer = styled(Container)`
   margin-top: 50px;
@@ -47,7 +48,7 @@ const MRrecoResultContainerBM25 = styled(Container)`
 `
 
 const MRResultCard = styled(Card)`
-  margin: 15px;
+  margin: 1.8em;
   padding: 5px;
 `
 
@@ -56,27 +57,60 @@ const MRResultCard = styled(Card)`
 
 export default function MovieDetail() {
     const navigate = useNavigate()
+    const location = useLocation()
     const {movieID} = useParams();
-    console.log(movieID)
 
     const [movieData, setMovieData] = useState([]);
     const [BM25Data, setBM25Data] = useState([]);
+    const [VecData, setVecData] = useState([]);
+    const [PLSAData, setPLSAData] = useState([]);
     const [rawData, setRawData] = useState();
-    const [rawReco, setRawReco] = useState();
+    const [rawRecoBM25, setRawRecoBM25] = useState();
+    const [rawRecoVec, setRawRecoVec] = useState();
+    const [pressedReco, setPressedReco] = useState(false);
+    const [loadingBM25, setLoadingBM25] = useState(false);
+    const [loadingVec, setLoadingVec] = useState(false);
+    const [loadingPLSA, setLoadingPLSA] = useState(false);
+
     useState(() => {
         getMovieByID(movieID).then(res => {
-            console.log(res.data)
-            console.log(res.data[0]["movie_title"])
+            // console.log(res.data)
+            // console.log(res.data[0]["movie_title"])
             setMovieData(res.data[0])
-            setRawData(res.data)
+            setRawData(res.data[0].movie_id)
         })
     })
 
+    useEffect(() => {
+        getMovieByID(movieID).then(res => {
+            // console.log(res.data)
+            // console.log(res.data[0]["movie_title"])
+            setMovieData(res.data[0])
+            setRawData(res.data)
+        })
+    }, [location])
+
     function getReco() {
+        setPressedReco(true)
+        setLoadingBM25(true)
+        setLoadingVec(true)
+        setLoadingPLSA(true)
         getRecoBM25(movieID).then(res => {
-            console.log(res.data)
-            setRawReco(res.data)
+            // console.log(res.data)
+            setRawRecoBM25(res.data[0].movie_id)
             setBM25Data(res.data)
+            setLoadingBM25(false)
+        })
+        getRecoVec(movieID).then(res => {
+            // console.log(res.data)
+            setRawRecoVec(res.data[0].movie_id)
+            setVecData(res.data)
+            setLoadingVec(false)
+        })
+        getRecoPLSA(movieID).then(res => {
+            console.log(res.data)
+            setPLSAData(res.data)
+            setLoadingPLSA(false)
         })
     }
 
@@ -107,7 +141,7 @@ export default function MovieDetail() {
                             <Col xs={14} md={9}>
                                 <MRdetailCardTitle>{movieData["movie_title"]}</MRdetailCardTitle>
                                 <Card.Text>{movieData["movie_year"]}</Card.Text>
-                                <Card.Text>Restricted Level: {movieData["movie_level"]} | Total Length: {movieData["movie_length"]} | IMBD rating: {movieData["movie_score"]}</Card.Text>
+                                <Card.Text>Restricted Level: {movieData["movie_level"]} | Total Length: {movieData["movie_length"]} | IMDB rating: {movieData["movie_score"]}</Card.Text>
                                 <hr/>
                                 <Card.Text>{movieData.movie_plot}</Card.Text>
                             </Col>
@@ -117,32 +151,91 @@ export default function MovieDetail() {
                 </MRdetailCard>
             </MRrecoResultContainer>)}
 
-            <MRrecoResultContainer>
+            {pressedReco &&
+            (<MRrecoResultContainer>
                 <h3>Recommendations By BM25 Okapi</h3>
                 <hr/>
-                <MRrecoResultContainerBM25>
-                    {rawReco &&
-                    (BM25Data.map(movieData => (
-                        <MRResultCard key={movieData.movie_id} style={{ width: '12rem' }} onClick={() => toDetail(movieData.movie_id)}>
-                            <Card.Img variant="left" src={movieData.movie_poster} />
-                            <Card.Body>
-                                <Card.Title>{movieData.movie_title}</Card.Title>
-                                <Card.Text>{movieData.movie_year}</Card.Text>
-                                <Badge bg="secondary">
-                                    {movieData.movie_genres[0]}
-                                </Badge>{' '}
-                                <Badge bg="secondary">
-                                    {movieData.movie_genres[1]}
-                                </Badge>{' '}
-                                <Badge bg="secondary">
-                                    {movieData.movie_genres[2]}
-                                </Badge>{' '}
-                                {/*<Button variant="primary">Go somewhere</Button>*/}
-                            </Card.Body>
-                        </MRResultCard>)))}
-                </MRrecoResultContainerBM25>
-            </MRrecoResultContainer>
+                {loadingBM25 ?
+                    (<Spinner animation="border" />) :
+                    (<MRrecoResultContainerBM25>
+                        {BM25Data.map(movieData => (
+                            <MRResultCard key={movieData.movie_id} style={{ width: '12rem' }} onClick={() => toDetail(movieData.movie_id)}>
+                                <Card.Img variant="left" src={movieData.movie_poster} />
+                                <Card.Body>
+                                    <Card.Title>{movieData.movie_title}</Card.Title>
+                                    <Card.Text>{movieData.movie_year}</Card.Text>
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[0]}
+                                    </Badge>{' '}
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[1]}
+                                    </Badge>{' '}
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[2]}
+                                    </Badge>{' '}
+                                    {/*<Button variant="primary">Go somewhere</Button>*/}
+                                </Card.Body>
+                            </MRResultCard>))}
+                    </MRrecoResultContainerBM25>)}
+            </MRrecoResultContainer>)}
 
+            {pressedReco &&
+            (<MRrecoResultContainer>
+                <h3>Recommendations By Word2Vec (query movie not included)</h3>
+                <hr/>
+                {loadingVec ?
+                    (<Spinner animation="border" />) :
+                    (<MRrecoResultContainerBM25>
+
+                        {VecData.map(movieData => (
+                            <MRResultCard key={movieData.movie_id} style={{ width: '12rem' }} onClick={() => toDetail(movieData.movie_id)}>
+                                <Card.Img variant="left" src={movieData.movie_poster} />
+                                <Card.Body>
+                                    <Card.Title>{movieData.movie_title}</Card.Title>
+                                    <Card.Text>{movieData.movie_year}</Card.Text>
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[0]}
+                                    </Badge>{' '}
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[1]}
+                                    </Badge>{' '}
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[2]}
+                                    </Badge>{' '}
+                                    {/*<Button variant="primary">Go somewhere</Button>*/}
+                                </Card.Body>
+                            </MRResultCard>))}
+                    </MRrecoResultContainerBM25>)}
+            </MRrecoResultContainer>)}
+
+            {pressedReco &&
+            (<MRrecoResultContainer>
+                <h3>Recommendations By PLSA</h3>
+                <hr/>
+                {loadingPLSA ?
+                    (<Spinner animation="border" />) :
+                    (<MRrecoResultContainerBM25>
+
+                        {PLSAData.map(movieData => (
+                            <MRResultCard key={movieData.movie_id} style={{ width: '12rem' }} onClick={() => toDetail(movieData.movie_id)}>
+                                <Card.Img variant="left" src={movieData.movie_poster} />
+                                <Card.Body>
+                                    <Card.Title>{movieData.movie_title}</Card.Title>
+                                    <Card.Text>{movieData.movie_year}</Card.Text>
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[0]}
+                                    </Badge>{' '}
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[1]}
+                                    </Badge>{' '}
+                                    <Badge bg="secondary">
+                                        {movieData.movie_genres[2]}
+                                    </Badge>{' '}
+                                    {/*<Button variant="primary">Go somewhere</Button>*/}
+                                </Card.Body>
+                            </MRResultCard>))}
+                    </MRrecoResultContainerBM25>)}
+            </MRrecoResultContainer>)}
         </div>
     )
 }

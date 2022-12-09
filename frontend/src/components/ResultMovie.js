@@ -26,7 +26,6 @@ const MRResultCard = styled(Card)`
 
 
 
-
 export default function ResultMovie() {
     const navigate = useNavigate()
     const {movieName} = useParams();
